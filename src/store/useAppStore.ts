@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 
 import { todayISO, todayWeekday, yesterdayISO } from '@/lib/date';
+import { DEMO_MEMBERS, buildDemoFeed } from '@/data/demoCircle';
 import type {
   AwardResult,
+  Circle,
+  CircleEvent,
+  CircleMember,
   Habit,
   HabitCompletion,
   LedgerEntry,
@@ -27,6 +31,8 @@ import type {
 
 const PROOF_BONUS = 5;
 const MILESTONES: Record<number, number> = { 7: 50, 30: 200, 100: 500 };
+const USER_ID = 'me';
+const genCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 
 let seq = 0;
 const uid = (p: string) => `${p}-${Date.now()}-${seq++}`;
@@ -43,6 +49,10 @@ type AppState = {
   availablePoints: number;
   lifetimeEarned: number;
   lastAward: AwardResult | null;
+  circles: Circle[];
+  members: Record<string, CircleMember[]>;
+  currentCircleId: string | null;
+  feed: CircleEvent[];
 
   setProfile: (p: { name: string; notifyTime?: string }) => void;
   pickHabits: (habitIds: string[]) => void;
@@ -52,6 +62,10 @@ type AppState = {
   habitsDueToday: () => Habit[];
   completeHabitToday: (habitId: string, opts?: CompleteOpts) => AwardResult;
   clearAward: () => void;
+  createCircle: (name: string, visibility: 'public' | 'private') => string;
+  joinByCode: (code: string) => boolean;
+  leaveCircle: () => void;
+  cheer: (eventId: string) => void;
   reset: () => void;
 };
 
@@ -79,6 +93,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
   availablePoints: 0,
   lifetimeEarned: 0,
   lastAward: null,
+  circles: [],
+  members: {},
+  currentCircleId: null,
+  feed: [],
 
   setProfile: ({ name, notifyTime }) =>
     set((s) => ({
@@ -216,10 +234,83 @@ export const useAppStore = create<AppState>()((set, get) => ({
       lastAward: award,
     });
 
+    const circleId = get().currentCircleId;
+    if (circleId) {
+      const me = get().user;
+      const ev: CircleEvent = {
+        id: uid('ev'),
+        circleId,
+        actorId: USER_ID,
+        actorName: me.name || 'You',
+        actorInitials: me.avatarInitials || 'B',
+        type: award.isMilestone ? 'milestone' : 'proof',
+        habitName: habit.name,
+        photoUri: opts.proofUri,
+        caption: opts.caption,
+        streak: newCurrent,
+        createdAt: Date.now(),
+        cheers: 0,
+        cheeredByMe: false,
+      };
+      set((st) => ({ feed: [ev, ...st.feed] }));
+    }
+
     return award;
   },
 
   clearAward: () => set({ lastAward: null }),
+
+  createCircle: (name, visibility) => {
+    const code = genCode();
+    const cid = uid('circle');
+    const me = get().user;
+    const owner: CircleMember = {
+      userId: USER_ID,
+      name: me.name || 'You',
+      avatarInitials: me.avatarInitials || 'B',
+      role: 'owner',
+      joinedAt: Date.now(),
+    };
+    set({
+      circles: [{ id: cid, name: name || 'My Circle', visibility, inviteCode: code, createdBy: USER_ID }],
+      members: { [cid]: [owner] },
+      currentCircleId: cid,
+      feed: [],
+    });
+    return code;
+  },
+
+  joinByCode: (code) => {
+    const cid = uid('circle');
+    const me = get().user;
+    const meMember: CircleMember = {
+      userId: USER_ID,
+      name: me.name || 'You',
+      avatarInitials: me.avatarInitials || 'B',
+      role: 'member',
+      joinedAt: Date.now(),
+    };
+    set({
+      circles: [
+        { id: cid, name: "Theo's Circle", visibility: 'private', inviteCode: code.toUpperCase(), createdBy: 'demo-theo' },
+      ],
+      members: { [cid]: [...DEMO_MEMBERS, meMember] },
+      currentCircleId: cid,
+      feed: buildDemoFeed(cid),
+    });
+    return true;
+  },
+
+  leaveCircle: () => set({ circles: [], members: {}, currentCircleId: null, feed: [] }),
+
+  cheer: (eventId) =>
+    set((st) => ({
+      feed: st.feed.map((e) =>
+        e.id === eventId
+          ? { ...e, cheeredByMe: !e.cheeredByMe, cheers: e.cheers + (e.cheeredByMe ? -1 : 1) }
+          : e,
+      ),
+    })),
 
   reset: () =>
     set({
@@ -232,5 +323,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
       availablePoints: 0,
       lifetimeEarned: 0,
       lastAward: null,
+      circles: [],
+      members: {},
+      currentCircleId: null,
+      feed: [],
     }),
 }));

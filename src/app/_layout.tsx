@@ -46,6 +46,9 @@ export default function RootLayout() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="circle/create" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="circle/join" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="invite/[code]" options={{ presentation: 'modal' }} />
           <Stack.Screen
             name="award"
             options={{ presentation: 'transparentModal', animation: 'fade' }}

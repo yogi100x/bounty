@@ -62,6 +62,42 @@ export type UserProfile = {
   onboarded: boolean;
 };
 
+export type CircleVisibility = 'public' | 'private';
+
+export type Circle = {
+  id: string;
+  name: string;
+  visibility: CircleVisibility;
+  inviteCode: string;
+  createdBy: string;
+};
+
+export type CircleMember = {
+  userId: string;
+  name: string;
+  avatarInitials: string;
+  role: 'owner' | 'member';
+  joinedAt: number;
+};
+
+export type CircleEventType = 'proof' | 'milestone' | 'joined' | 'cheer';
+
+export type CircleEvent = {
+  id: string;
+  circleId: string;
+  actorId: string;
+  actorName: string;
+  actorInitials: string;
+  type: CircleEventType;
+  habitName?: string;
+  photoUri?: string;
+  caption?: string;
+  streak?: number;
+  createdAt: number;
+  cheers: number;
+  cheeredByMe: boolean;
+};
+
 /** Returned by completeHabitToday — drives the award/first-win moment. */
 export type AwardResult = {
   habitId: string;
