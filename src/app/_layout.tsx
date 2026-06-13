@@ -42,8 +42,15 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: '#0E0E16' },
-          }}
-        />
+          }}>
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="capture" options={{ presentation: 'modal' }} />
+          <Stack.Screen
+            name="award"
+            options={{ presentation: 'transparentModal', animation: 'fade' }}
+          />
+        </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
