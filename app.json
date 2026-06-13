@@ -2,6 +2,7 @@
   "expo": {
     "name": "Bounty",
     "slug": "Bounty",
+    "owner": "yogi.100x",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -40,6 +41,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1b142866-6d58-450e-9c2f-4584bb7a0172"
+      }
     }
   }
 }
