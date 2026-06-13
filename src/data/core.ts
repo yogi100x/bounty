@@ -9,6 +9,7 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { HABIT_LIBRARY } from '@/data/habitLibrary';
 import { todayISO, todayWeekday, yesterdayISO } from '@/lib/date';
 import type { AwardResult } from '@/lib/types';
+import { DEMO_AWARD, DEMO_LEDGER, DEMO_SNAPSHOT, PRESENTATION } from '@/lib/demo';
 import { useAppStore } from '@/store/useAppStore';
 
 function tz(): string {
@@ -21,11 +22,16 @@ function tz(): string {
 
 /** Single reactive read for Today / Profile / Progress. `undefined` while loading. */
 export function useSnapshot() {
-  return useQuery(api.core.snapshot, { weekday: todayWeekday(), localDate: todayISO() });
+  const live = useQuery(
+    api.core.snapshot,
+    PRESENTATION ? 'skip' : { weekday: todayWeekday(), localDate: todayISO() },
+  );
+  return PRESENTATION ? (DEMO_SNAPSHOT as unknown as typeof live) : live;
 }
 
 export function useLedger() {
-  return useQuery(api.core.ledger, {});
+  const live = useQuery(api.core.ledger, PRESENTATION ? 'skip' : {});
+  return PRESENTATION ? (DEMO_LEDGER as unknown as typeof live) : live;
 }
 
 export type Snapshot = NonNullable<ReturnType<typeof useSnapshot>>;
@@ -52,6 +58,22 @@ export function useCoreActions() {
     });
     const { storageId } = (await res.json()) as { storageId: string };
     return storageId;
+  }
+
+  if (PRESENTATION) {
+    return {
+      completeHabit: async (
+        _habitId: Id<'habits'>,
+        _opts?: { proofUri?: string; caption?: string; source?: 'manual' | 'bereal'; onTime?: boolean },
+      ): Promise<AwardResult> => {
+        setAward(DEMO_AWARD);
+        return DEMO_AWARD;
+      },
+      pickHabits: async (_ids: string[]) => {},
+      addCustomHabit: async (_i: { name: string; icon: string; proofRequired: boolean }) => {},
+      setProfile: async (_p: { name?: string; avatarColor?: string; notifyTime?: string }) => {},
+      completeOnboarding: async () => {},
+    };
   }
 
   return {

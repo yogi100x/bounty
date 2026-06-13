@@ -14,7 +14,9 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 
 import { PushRegistrar } from '@/components/push-registrar';
+import { DEMO_AWARD, PRESENTATION } from '@/lib/demo';
 import { configureNotifications } from '@/lib/notifications';
+import { useAppStore } from '@/store/useAppStore';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -39,6 +41,11 @@ function InitialLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    if (PRESENTATION) {
+      // Presentation mode: bypass auth + seed an award for the /award screenshot.
+      useAppStore.getState().setAward(DEMO_AWARD);
+      return;
+    }
     if (!isLoaded) return;
     const inAuthGroup = segments[0] === '(auth)';
     if (!isSignedIn && !inAuthGroup) {
