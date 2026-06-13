@@ -3,7 +3,7 @@
 **Date:** 2026-06-13
 **Derived from:** `docs/Bounty.webp` (Mood Journal reference)
 **Stack:** Expo / React Native + NativeWind (Tailwind). Tokens below are written to drop into `tailwind.config.js`.
-**Related:** `docs/PRD-V1.md`, `docs/PRD-V1-no-mascot.md`, `docs/USER-JOURNEY-V1*.md`
+**Related:** `docs/PRD-V1-no-mascot.md`, `docs/USER-JOURNEY-V1-no-mascot.md`, `docs/DESIGN-SPEC.md`, `docs/IMPLEMENTATION-PLAN.md`
 
 ---
 

@@ -30,16 +30,20 @@ What replaces the companion:
 
 > Finch parallel without the pet: you don't leave onboarding empty-handed; you leave having already done the thing once, with a streak alive.
 
+> **Build note (sequencing):** the first-win loop must exist in **Phase 1** with a *manual* proof-capture path — it cannot wait for Circles (Phase 2) or the BeReal nudge (Phase 3). Ship a minimal capture + the award moment first; layer the timed prompt and social feed on top. See `IMPLEMENTATION-PLAN.md` §1.
+
 ### Stage 1 — Day 1–3 (the loop proves itself)
 **Goal: show the daily loop is fast, satisfying, and judgment-free.**
 - Daily nudge → **BeReal-style capture** → proof → instant confirmation → points credited.
 - Optional micro-note after proof (lightweight journaling) — keeps an emotional thread to *why* the habit matters.
 - First **streak** builds. Show momentum, not pressure.
-- **Miss handling:** a missed day is met with an encouraging, blame-free path back ("pick up where you left off"). No shaming UI. (Decide grace/freeze — PRD Open Decision #3.)
+- **Miss handling:** a missed day is met with an encouraging, blame-free path back ("pick up where you left off"). No shaming UI. A **streak pause/freeze** (free, limited uses) is a real V1 mechanic — not just copy — so a single miss doesn't erase weeks. (Timezone day-boundary + pause rules — PRD Open Decision #3; engine in `IMPLEMENTATION-PLAN.md` §3.)
 
 ### Stage 2 — Day 3–10 (the social hook — our primary moat)
 **Goal: convert solo retention into social retention, the strongest lever and the pet's replacement.**
 - Strong nudge to bring **1 friend** into a private Circle (≤6): "habits stick when someone's beside you."
+- **Invite → install → auto-join:** the invite link/code must carry a new friend from tap → app install → sign-in → landing **directly inside your Circle** (deep link). This end-to-end path is the social wedge — design it fully, not just "share a code."
+- **Empty-circle warmth:** a Circle of one (you, waiting for a friend) and a fresh feed must feel inviting, not barren — copy and visuals carry the warmth here, since there's no mascot. (See `DESIGN-SPEC.md` §6 Empty states.)
 - Circle feed: see friends' proofs and streaks. **Cheers/reactions** create the reciprocity loop the pet used to.
 - Shared BeReal moment (if circle-wide window) = a daily group ritual you don't want to be the one to skip.
 - **First badge** at a streak milestone — visible to the Circle.
@@ -51,13 +55,13 @@ What replaces the companion:
 - The **profile becomes the trophy case**: longest streaks, badge shelf, total habits proven, time active. *This* is the thing that visibly grows.
 - **Points ledger** matures → first **marketplace redemption** (brand-funded) feels earned.
 - Custom habits introduced now (user has trust + context to design their own).
-- Optional: surface a personal "progress story" (e.g. "21 days of movement") — the before/after that stands in for watching a pet grow.
+- **Progress story (the visible-growth substitute):** a real V1 surface — a personal "you've come this far" view (e.g. "21 days of movement": streak chart, total proofs, longest streak, badges earned). This is the no-mascot replacement for watching a pet grow, so it ships in V1, not as a maybe. (Powered by the `milestones` table — `IMPLEMENTATION-PLAN.md`.)
 
 ### Stage 4 — Month 2+ (identity + surprise)
 **Goal: from "an app I use" to "who I am.")**
 - Deep streaks + a full badge shelf + an active Circle = sunk emotional + social investment.
 - **Surprise & delight** layer (Finch's "adventures" equivalent, mascot-free): Circle milestones, seasonal challenges, streak-anniversary moments, group goals. Invest here once the core loop is proven.
-- Re-engagement: lapsed users get an encouraging nudge (and "your Circle missed you" — leaning on people, not a sad pet).
+- **Re-engagement (concrete triggers):** after N days inactive (off last-completion date), send an encouraging push — "your Circle missed you" when they're in an active pod, or a gentle solo nudge otherwise. Copy is warm, never guilt-based. (Notification set defined in `IMPLEMENTATION-PLAN.md` Phase 3.)
 
 ---
 
