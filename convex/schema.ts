@@ -33,6 +33,7 @@ export default defineSchema({
     notifyTime: v.optional(v.string()), // HH:mm daily nudge
     avatarColor: v.optional(v.string()), // hex preset, e.g. '#8B5CF6'
     onboarded: v.optional(v.boolean()),
+    pushToken: v.optional(v.string()), // Expo push token (optional; non-breaking)
   }).index('by_clerk_id', ['clerkId']),
 
   habits: defineTable({

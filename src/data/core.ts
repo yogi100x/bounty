@@ -58,7 +58,12 @@ export function useCoreActions() {
     /** Complete a habit (optionally with a proof photo). Sets `lastAward` for /award. */
     async completeHabit(
       habitId: Id<'habits'>,
-      opts?: { proofUri?: string; caption?: string },
+      opts?: {
+        proofUri?: string;
+        caption?: string;
+        source?: 'manual' | 'bereal';
+        onTime?: boolean;
+      },
     ): Promise<AwardResult> {
       let proof: { photoStorageId: string; caption?: string; visibility: 'circle' } | undefined;
       if (opts?.proofUri) {
@@ -71,7 +76,8 @@ export function useCoreActions() {
         localDate: todayISO(),
         yesterdayISO: yesterdayISO(),
         timezone: tz(),
-        source: 'manual',
+        source: opts?.source ?? 'manual',
+        onTime: opts?.onTime,
         proof,
       })) as AwardResult;
       setAward(award);

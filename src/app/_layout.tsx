@@ -12,6 +12,9 @@ import { ConvexReactClient } from 'convex/react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
+
+import { PushRegistrar } from '@/components/push-registrar';
+import { configureNotifications } from '@/lib/notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -19,6 +22,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 SplashScreen.preventAutoHideAsync();
+configureNotifications();
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
@@ -45,12 +49,14 @@ function InitialLayout() {
   }, [isLoaded, isSignedIn, segments, router]);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#0E0E16' },
-      }}>
-      <Stack.Screen name="(auth)" />
+    <>
+      <PushRegistrar />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#0E0E16' },
+        }}>
+        <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="capture" options={{ presentation: 'modal' }} />
@@ -58,10 +64,11 @@ function InitialLayout() {
       <Stack.Screen name="circle/join" options={{ presentation: 'modal' }} />
       <Stack.Screen name="invite/[code]" options={{ presentation: 'modal' }} />
       <Stack.Screen
-        name="award"
-        options={{ presentation: 'transparentModal', animation: 'fade' }}
-      />
-    </Stack>
+          name="award"
+          options={{ presentation: 'transparentModal', animation: 'fade' }}
+        />
+      </Stack>
+    </>
   );
 }
 

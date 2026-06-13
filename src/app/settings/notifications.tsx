@@ -2,28 +2,34 @@ import { useEffect, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useMutation, useQuery } from 'convex/react';
 
+import { api } from '../../../convex/_generated/api';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Body, Caption, Heading, Label } from '@/components/ui/text';
-import { useAppStore } from '@/store/useAppStore';
 import { hapticTap } from '@/lib/haptics';
-import type { NotifPrefs } from '@/lib/types';
 import {
   cancelAllNudges,
   configureNotifications,
   requestNotificationPermission,
   scheduleDailyNudge,
 } from '@/lib/notifications';
+import { registerForPushNotificationsAsync } from '@/lib/push';
 
 // Violet track/thumb for the toggles.
 const TRACK = { false: '#26263A', true: '#7C3AED' };
 const THUMB_ON = '#EDE9FE';
 const THUMB_OFF = '#6B6880';
 
+// Default daily-nudge time when the user turns the toggle on.
+const DEFAULT_NUDGE_TIME = '20:00';
+
+type RowKey = 'dailyNudge' | 'streakAtRisk' | 'circleActivity' | 'bereal';
+
 type Row = {
-  key: keyof NotifPrefs;
+  key: RowKey;
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   caption: (time: string) => string;
@@ -57,9 +63,8 @@ const ROWS: Row[] = [
 ];
 
 export default function NotificationsSettingsScreen() {
-  const notifPrefs = useAppStore((s) => s.notifPrefs);
-  const notifyTime = useAppStore((s) => s.user.notifyTime);
-  const setNotifPref = useAppStore((s) => s.setNotifPref);
+  const prefs = useQuery(api.notifications.getPrefs);
+  const update = useMutation(api.notifications.updatePrefs);
 
   const [granted, setGranted] = useState(true);
 
@@ -79,23 +84,61 @@ export default function NotificationsSettingsScreen() {
     };
   }, []);
 
-  const enableReminders = async () => {
-    const ok = await requestNotificationPermission();
-    setGranted(ok);
-    if (ok && notifPrefs.dailyNudge) {
-      await scheduleDailyNudge(notifyTime);
+  // The active daily-nudge time (caption + scheduling), defaulting to 20:00.
+  const nudgeTime = prefs?.dailyNudgeTime ?? DEFAULT_NUDGE_TIME;
+
+  // Map Convex prefs onto the row toggle values.
+  const valueFor = (key: RowKey): boolean => {
+    if (!prefs) return false;
+    switch (key) {
+      case 'dailyNudge':
+        return prefs.dailyNudgeTime != null;
+      case 'streakAtRisk':
+        return prefs.streakAtRisk;
+      case 'circleActivity':
+        return prefs.circleActivity;
+      case 'bereal':
+        return prefs.berealEnabled;
     }
   };
 
-  const toggle = async (key: keyof NotifPrefs, value: boolean) => {
+  const enableReminders = async () => {
+    const ok = await requestNotificationPermission();
+    setGranted(ok);
+    if (!ok) return;
+    // Save the remote push token so server-driven push can reach this device.
+    await registerForPushNotificationsAsync();
+    // Schedule the local daily nudge if it's currently enabled.
+    if (prefs?.dailyNudgeTime != null) {
+      await scheduleDailyNudge(prefs.dailyNudgeTime);
+    }
+  };
+
+  const toggle = async (key: RowKey, value: boolean) => {
     hapticTap();
-    setNotifPref(key, value);
-    if (key === 'dailyNudge') {
-      if (value) {
-        await scheduleDailyNudge(notifyTime);
-      } else {
-        await cancelAllNudges();
+    try {
+      switch (key) {
+        case 'dailyNudge':
+          if (value) {
+            await update({ dailyNudgeTime: DEFAULT_NUDGE_TIME });
+            await scheduleDailyNudge(DEFAULT_NUDGE_TIME);
+          } else {
+            await update({ dailyNudgeTime: null });
+            await cancelAllNudges();
+          }
+          break;
+        case 'streakAtRisk':
+          await update({ streakAtRisk: value });
+          break;
+        case 'circleActivity':
+          await update({ circleActivity: value });
+          break;
+        case 'bereal':
+          await update({ berealEnabled: value });
+          break;
       }
+    } catch {
+      // no-op — keep the UI responsive; Convex query will reconcile.
     }
   };
 
@@ -138,30 +181,34 @@ export default function NotificationsSettingsScreen() {
       ) : null}
 
       {/* Preference rows */}
-      <View className="gap-3">
-        {ROWS.map((row) => {
-          const value = notifPrefs[row.key];
-          return (
-            <Card key={row.key} className="flex-row items-start gap-3 py-4">
-              <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-full bg-surface-2">
-                <Feather name={row.icon} size={18} color="#C4B5FD" />
-              </View>
-              <View className="flex-1 pr-1">
-                <Label className="text-[15px]">{row.label}</Label>
-                <Caption className="mt-1 text-text-secondary">{row.caption(notifyTime)}</Caption>
-              </View>
-              <Switch
-                value={value}
-                onValueChange={(v) => toggle(row.key, v)}
-                trackColor={TRACK}
-                thumbColor={value ? THUMB_ON : THUMB_OFF}
-                ios_backgroundColor={TRACK.false}
-                accessibilityLabel={row.label}
-              />
-            </Card>
-          );
-        })}
-      </View>
+      {prefs === undefined ? (
+        <Caption className="mt-2 text-center text-text-muted">Loading your preferences…</Caption>
+      ) : (
+        <View className="gap-3">
+          {ROWS.map((row) => {
+            const value = valueFor(row.key);
+            return (
+              <Card key={row.key} className="flex-row items-start gap-3 py-4">
+                <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-full bg-surface-2">
+                  <Feather name={row.icon} size={18} color="#C4B5FD" />
+                </View>
+                <View className="flex-1 pr-1">
+                  <Label className="text-[15px]">{row.label}</Label>
+                  <Caption className="mt-1 text-text-secondary">{row.caption(nudgeTime)}</Caption>
+                </View>
+                <Switch
+                  value={value}
+                  onValueChange={(v) => toggle(row.key, v)}
+                  trackColor={TRACK}
+                  thumbColor={value ? THUMB_ON : THUMB_OFF}
+                  ios_backgroundColor={TRACK.false}
+                  accessibilityLabel={row.label}
+                />
+              </Card>
+            );
+          })}
+        </View>
+      )}
 
       <Caption className="mt-6 text-center text-text-muted">
         Change your check-in time anytime from your profile.

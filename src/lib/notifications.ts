@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 /**
@@ -11,6 +12,23 @@ import * as Notifications from 'expo-notifications';
  */
 
 const DAILY_NUDGE_ID = 'bounty-daily-nudge';
+
+/**
+ * Ensure the Android "default" notification channel exists. No-op on iOS.
+ * Android requires a channel for notifications to display; wrapped in try/catch
+ * so a missing native module never crashes the app.
+ */
+export async function ensureAndroidChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Default',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  } catch {
+    // no-op — native module unavailable
+  }
+}
 
 /** Set the foreground handler: show a banner, no badge, no sound. */
 export function configureNotifications(): void {
@@ -26,6 +44,8 @@ export function configureNotifications(): void {
   } catch {
     // no-op — native module unavailable
   }
+  // Fire-and-forget: set up the Android channel.
+  void ensureAndroidChannel();
 }
 
 /** Request permission and return whether it was granted. */

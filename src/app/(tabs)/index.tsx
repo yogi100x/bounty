@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { Id } from '../../../convex/_generated/dataModel';
 import { HabitRow } from '@/components/habit-row';
@@ -12,7 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label, Title } from '@/components/ui/text';
 import { useCoreActions, useSnapshot, type SnapshotHabit } from '@/data/core';
 import { prettyToday } from '@/lib/date';
-import { hapticMilestone, hapticSuccess } from '@/lib/haptics';
+import { hapticMilestone, hapticSuccess, hapticTap } from '@/lib/haptics';
 import type { Habit } from '@/lib/types';
 
 const MOODS = ['Energized', 'Tired', 'Focused', 'Calm'] as const;
@@ -95,6 +95,35 @@ export default function TodayScreen() {
           </View>
         </View>
       </Card>
+
+      {/* Daily prompt — BeReal-style capture */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Daily prompt — capture now"
+        onPress={() => {
+          hapticTap();
+          router.push('/camera');
+        }}
+        className="mt-4 flex-row items-center gap-3.5 rounded-lg border border-violet-500 px-4 py-3.5"
+        style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+        <View
+          className="h-11 w-11 items-center justify-center rounded-pill"
+          style={{
+            backgroundColor: 'rgba(139,92,246,0.22)',
+            shadowColor: '#8B5CF6',
+            shadowOpacity: 0.4,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 6,
+          }}>
+          <Feather name="camera" size={22} color="#C4B5FD" />
+        </View>
+        <View className="flex-1">
+          <Label className="text-violet-200">Daily prompt</Label>
+          <Body className="mt-0.5 text-text-primary">Capture now — prove your moment</Body>
+        </View>
+        <Feather name="chevron-right" size={20} color="#C4B5FD" />
+      </Pressable>
 
       {/* Habits */}
       <View className="mb-3 mt-7 flex-row items-baseline justify-between">

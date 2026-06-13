@@ -7,6 +7,8 @@
 
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { Id } from './_generated/dataModel';
+import { internal } from './_generated/api';
 import { getOrCreateUser, currentBalance } from './lib/users';
 import { computeNextStreak } from './lib/streak';
 import { computePoints } from './points';
@@ -225,6 +227,55 @@ export const completeHabit = mutation({
           streak: next.current,
           photoStorageId: args.proof?.photoStorageId,
           createdAt: now,
+        });
+      }
+    }
+
+    // ── Circle activity push (best-effort, bounded) ────────────────────────
+    // If we emitted a milestone and/or shared-proof event into the user's
+    // circles, notify the OTHER members whose circleActivity pref is on. We
+    // gather tokens here (DB reads are fine in a mutation) and defer the
+    // network call to the sendPush action via the scheduler.
+    const sharedProof = hasProof && args.proof?.visibility === 'circle';
+    if (isMilestone || sharedProof) {
+      const memberships = await ctx.db
+        .query('circleMembers')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .take(20); // V1: a user is in few circles (≤6 members each).
+
+      // Collect unique other-member user ids across all the user's circles.
+      const otherUserIds = new Set<Id<'users'>>();
+      for (const m of memberships) {
+        const rows = await ctx.db
+          .query('circleMembers')
+          .withIndex('by_circle', (q) => q.eq('circleId', m.circleId))
+          .take(6); // circle cap is 6 members
+        for (const r of rows) {
+          if (r.userId !== user._id) otherUserIds.add(r.userId);
+        }
+      }
+
+      const tokens: string[] = [];
+      for (const uid of otherUserIds) {
+        const other = await ctx.db.get(uid);
+        if (!other?.pushToken) continue;
+        const prefs = await ctx.db
+          .query('notificationPrefs')
+          .withIndex('by_user', (q) => q.eq('userId', uid))
+          .unique();
+        if (prefs?.circleActivity) tokens.push(other.pushToken);
+      }
+
+      if (tokens.length > 0) {
+        const title = isMilestone ? 'A milestone in your circle' : 'Circle activity';
+        const body = isMilestone
+          ? `${user.name} just hit a ${next.current}-day streak on ${habit.name}.`
+          : `${user.name} just showed up.`;
+        await ctx.scheduler.runAfter(0, internal.notifications.sendPush, {
+          tokens,
+          title,
+          body,
+          data: { type: isMilestone ? 'milestone' : 'proof' },
         });
       }
     }

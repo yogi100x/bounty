@@ -4,6 +4,7 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
+import { internal } from './_generated/api';
 import { getOrCreateUser, requireUser } from './lib/users';
 
 const MAX_MEMBERS = 6;
@@ -353,6 +354,29 @@ export const cheer = mutation({
       userId: user._id,
       createdAt: Date.now(),
     });
+
+    // Best-effort push to the event's actor (not when cheering your own event).
+    // DB reads are fine in a mutation; the network call is deferred to the
+    // sendPush action via the scheduler (never fetch inline in a mutation).
+    const event = await ctx.db.get(circleEventId);
+    if (event && event.actorId !== user._id) {
+      const actor = await ctx.db.get(event.actorId);
+      if (actor?.pushToken) {
+        const actorPrefs = await ctx.db
+          .query('notificationPrefs')
+          .withIndex('by_user', (q) => q.eq('userId', actor._id))
+          .unique();
+        if (actorPrefs?.circleActivity) {
+          await ctx.scheduler.runAfter(0, internal.notifications.sendPush, {
+            tokens: [actor.pushToken],
+            title: 'Someone cheered you on',
+            body: `${user.name} cheered your check-in.`,
+            data: { type: 'cheer', circleEventId },
+          });
+        }
+      }
+    }
+
     return { cheered: true };
   },
 });
