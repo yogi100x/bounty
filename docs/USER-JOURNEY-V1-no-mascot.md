@@ -35,7 +35,7 @@ What replaces the companion:
 - Daily nudge → **BeReal-style capture** → proof → instant confirmation → points credited.
 - Optional micro-note after proof (lightweight journaling) — keeps an emotional thread to *why* the habit matters.
 - First **streak** builds. Show momentum, not pressure.
-- **Miss handling:** a missed day is met with an encouraging, blame-free path back ("pick up where you left off"). No shaming UI. (Decide grace/freeze — PRD Open Decision #4.)
+- **Miss handling:** a missed day is met with an encouraging, blame-free path back ("pick up where you left off"). No shaming UI. (Decide grace/freeze — PRD Open Decision #3.)
 
 ### Stage 2 — Day 3–10 (the social hook — our primary moat)
 **Goal: convert solo retention into social retention, the strongest lever and the pet's replacement.**

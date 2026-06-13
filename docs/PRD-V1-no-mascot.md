@@ -51,7 +51,7 @@ People who want to build daily habits and stick to them through light social acc
 ### 5.1 Authentication — Google Sign-In only
 - **Single auth path:** "Continue with Google." No email/password, no other providers in V1.
 - First sign-in provisions the user record (profile, avatar, empty points ledger).
-- Auth provider: **Clerk vs Better Auth still open** — see Open Decisions.
+- Auth provider: **Clerk** (chosen for V1).
 - **Requirements:** persistent session; sign-out; account deletion path (store-compliance).
 
 ### 5.2 Onboarding Screens
@@ -142,14 +142,13 @@ A short flow after first sign-in:
 
 ## 9. Open Decisions
 
-1. **Auth provider:** Clerk vs Better Auth.
-2. **Multiple circles per user:** allowed, or one at a time?
-3. **BeReal window:** shared circle-wide moment, or per-user scheduled time?
-4. **Streak rules:** hard reset on miss, or grace/freeze (and timezone day-boundary)?
-5. **Proof privacy:** stored where; visible only to circle vs publicly; retention/deletion.
-6. **Points model:** keep a weekly/circle score, or spendable-only for V1?
-7. **Public circle discovery:** browse/search list, or invite-link-only.
-8. **Success-metric targets:** set concrete numbers for §4.
+1. **Multiple circles per user:** allowed, or one at a time?
+2. **BeReal window:** shared circle-wide moment, or per-user scheduled time?
+3. **Streak rules:** hard reset on miss, or grace/freeze (and timezone day-boundary)?
+4. **Proof privacy:** stored where; visible only to circle vs publicly; retention/deletion.
+5. **Points model:** keep a weekly/circle score, or spendable-only for V1?
+6. **Public circle discovery:** browse/search list, or invite-link-only.
+7. **Success-metric targets:** set concrete numbers for §4.
 
 ## 10. Phasing (suggested)
 
