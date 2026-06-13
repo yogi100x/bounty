@@ -70,6 +70,34 @@ These are the highest-risk pieces; spec and unit-test them hard.
 
 **Proposed point values (tunable):** completion `+10`; proof attached `+5`; on-time BeReal capture `+5` bonus; streak milestones `7 → +50`, `30 → +200`, `100 → +500`. Finalize before ledger work (PRD Open Decision #5).
 
+## 4. Proof storage & upload
+
+- Proofs are stored in **Convex file storage**. Capture (P1 image-picker / P4 CameraView) → `generateUploadUrl` mutation → client PUTs the photo → persist the returned `storageId` on the `proofs` row (replaces the P1 local `photoUri`).
+- **Visibility:** `circle` (shared with the user’s Circle) or `private` (solo). Feed reads resolve the URL via `ctx.storage.getUrl(storageId)`.
+- **Retention/deletion:** owner can delete a proof (file + row); account deletion cascades all proofs/files; leaving a circle hides shared proofs from that feed. No expiry in V1.
+
+## 5. Push notification delivery (the daily-ritual engine)
+
+Naming the notifications isn’t enough — wire the delivery:
+- **Tokens:** post-permission, register the Expo push token (`expo-notifications`) → store on `notificationPrefs`/`users`.
+- **Scheduling:** a Convex **cron** (`convex/crons.ts`) runs on an interval and, per user timezone + `notificationPrefs`, sends due notifications via the **Expo Push API** (`https://exp.host/--/api/v2/push/send`) from a Convex action.
+- **Triggers:** daily nudge (check-in time), streak-at-risk (evening if not done), circle-activity (emitted by the cheer/proof mutation), BeReal prompt (shared/per-user window), re-engagement (N days since last completion).
+- Quiet-by-default + per-type toggles in `notificationPrefs`. Local fallback (`scheduleNotificationAsync`) for the daily nudge so it works without the server loop.
+
+## 6. Invite deep links (including after-install)
+
+- App installed: `bounty://invite/<code>` → route `app/invite/[code].tsx` → `joinByCode`.
+- **After-install (new user):** the link target is a small web page that deep-links if installed, else sends to the store and surfaces a **“paste your invite code”** field on first launch (V1 fallback). True install-referrer attribution (Branch-style) is post-V1 — documented so the social wedge still works day one.
+
+## 7. Testing & verification
+
+- Add **vitest** (no runner exists today). Unit-test the pure streak engine (`convex/lib/streak.ts`) hard: tz boundary, DST, double-submit idempotency, pause-then-return, milestone thresholds; plus points math.
+- Keep the per-phase gate: `tsc --noEmit` + `expo export` + manual live test.
+
+## Wiring strategy (P1 mock → P2 Convex)
+
+`useAppStore` is the single data interface the screens call. P2 keeps that surface and swaps the internals for Convex queries/mutations (or a thin adapter), so P3/P4 screens built on the mock need minimal change at wire-up.
+
 ---
 
 ## Phase 0 — Foundation / setup
@@ -117,7 +145,7 @@ These are the highest-risk pieces; spec and unit-test them hard.
 - [ ] **BeReal timed proof:** scheduled push (`expo-notifications`), capture-now, expiry/“late” window, `onTime` flag → bonus; shared-circle vs per-user window (PRD Open Decision #2).
 - [ ] **Full notification set:** daily nudge, **streak-at-risk evening ping**, **circle-activity** notifications; quiet-by-default + per-type control via `notificationPrefs`.
 - [ ] **Badges:** definitions + award logic at milestones (7/30/100); profile shelf + circle visibility.
-- [ ] **Marketplace:** curated catalog (item, cost, stock, availability); `redeemReward` flow (§3); redemption history. **Seed with `cause`/donation rewards** so redemption works at launch without brand deals.
+- [ ] **Marketplace:** curated catalog (item, cost, stock, availability); `redeemReward` flow (§3); redemption history. **Seed with `cause`/donation rewards** so redemption works at launch without brand deals. Reward *fulfillment* is manual ops in V1 (redemption is recorded; delivery handled out-of-app).
 - [ ] **Avatar:** default + upload/preset personalization (no evolution).
 - [ ] **Profile “trophy case”:** current/longest streaks, badge shelf, total proofs, points + ledger view.
 - [ ] **Progress story:** a real V1 surface — “you’ve come this far” (e.g. “21 days of movement”: streak chart, totals, badges). The no-mascot substitute for watching a pet grow; powered by `milestones`.
@@ -138,9 +166,15 @@ These are the highest-risk pieces; spec and unit-test them hard.
 - Weekly recap; “on this day” resurfacing; seasonal/group Circle challenges (Stage 4 surprise layer).
 - Quantity habit type (“drink 8 glasses”) — currently check-off only.
 
-## Carried-over open decisions (PRD §9)
+## Resolved defaults (were PRD §9 open decisions)
 
-1. Multiple circles per user. 2. BeReal window (shared vs per-user). 3. Streak rules + timezone (engine in §3). 4. Proof privacy/storage/retention. 5. Points model + values (§3). 6. Public circle discovery. 7. Success-metric targets.
+1. **Multiple circles:** one active Circle per user in V1; multi-circle is fast-follow.
+2. **BeReal window:** shared circle-wide window when in a Circle; per-user check-in time when solo.
+3. **Streak rules:** device-local midnight day-boundary; miss resets to 1, softened by a limited free **streak pause** (2/month). Engine in §3, tested per §7.
+4. **Proof privacy/storage:** Convex file storage, circle-visible or private, owner-deletable, cascades on account deletion (§4).
+5. **Points model:** single spendable ledger (no separate weekly score), values in §3.
+6. **Public circle discovery:** invite-link/code only in V1; browse/search is fast-follow.
+7. **Success metrics:** activation = proved ≥1 habit on day 0; primary retention = % in a Circle with ≥1 active peer (numeric targets TBD; instrument from day 1).
 
 ## Risks & mitigations
 
