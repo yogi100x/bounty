@@ -4,7 +4,7 @@ Social habit-building app. Build daily habits, prove them, earn streaks & points
 
 - **Direction:** no-mascot (Circle + personal progress as the engagement engine)
 - **Stack:** Expo (React Native) + expo-router · Convex backend · Clerk auth (Google-only) · NativeWind
-- **Docs:** product specs live in `../karmic_pwa/docs/` (`PRD-V1-no-mascot.md`, `USER-JOURNEY-V1-no-mascot.md`, `DESIGN-SYSTEM.md`)
+- **Docs:** product specs live in `docs/` (`PRD-V1-no-mascot.md`, `USER-JOURNEY-V1-no-mascot.md`, `DESIGN-SYSTEM.md`, `Bounty.webp`)
 
 ## Setup
 
