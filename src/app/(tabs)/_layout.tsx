@@ -1,16 +1,19 @@
 import { Feather } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 
-import { useAppStore } from '@/store/useAppStore';
+import { useSnapshot } from '@/data/core';
 
 const ACTIVE = '#A78BFA'; // violet-400
 const INACTIVE = '#6E6E85'; // text-muted
 
 export default function TabsLayout() {
-  const onboarded = useAppStore((s) => s.user.onboarded);
+  const snap = useSnapshot();
+
+  // Loading: wait for the snapshot before deciding where to send the user.
+  if (snap === undefined) return null;
 
   // Gate: first-run users go through onboarding before reaching the tabs.
-  if (!onboarded) return <Redirect href="/(onboarding)/welcome" />;
+  if (!snap.profile.onboarded) return <Redirect href="/(onboarding)/welcome" />;
 
   return (
     <Tabs

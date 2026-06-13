@@ -8,20 +8,25 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '@/components/ui/screen';
 import { Button } from '@/components/ui/button';
 import { Body, Caption, Heading, Label } from '@/components/ui/text';
-import { useAppStore } from '@/store/useAppStore';
+import type { Id } from '../../convex/_generated/dataModel';
+import { useSnapshot, useCoreActions } from '@/data/core';
 import { hapticTap } from '@/lib/haptics';
 
 export default function CaptureScreen() {
   const { habitId } = useLocalSearchParams<{ habitId: string }>();
-  const habit = useAppStore((s) => s.habits.find((h) => h.id === habitId));
+  const snap = useSnapshot();
+  const actions = useCoreActions();
+  const habit = snap?.habits.find((h) => h._id === habitId);
 
   const [proofUri, setProofUri] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // No matching habit (e.g. deep-link with stale id) — bail back to Today.
+  // Wait for the snapshot to load before deciding it's missing.
   useEffect(() => {
-    if (!habit) router.back();
-  }, [habit]);
+    if (snap !== undefined && !habit) router.back();
+  }, [snap, habit]);
 
   if (!habit) return null;
 
@@ -59,13 +64,18 @@ export default function CaptureScreen() {
     if (!result.canceled && result.assets[0]) setProofUri(result.assets[0].uri);
   };
 
-  const handleComplete = () => {
-    if (!proofUri) return;
-    useAppStore.getState().completeHabitToday(habitId, {
-      proofUri,
-      caption: caption.trim() || undefined,
-    });
-    router.replace('/award');
+  const handleComplete = async () => {
+    if (!proofUri || submitting) return;
+    setSubmitting(true);
+    try {
+      await actions.completeHabit(habitId as Id<'habits'>, {
+        proofUri,
+        caption: caption.trim() || undefined,
+      });
+      router.replace('/award');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -156,7 +166,12 @@ export default function CaptureScreen() {
 
       {/* Submit */}
       <View className="mt-8">
-        <Button label="Complete" icon="check" disabled={!proofUri} onPress={handleComplete} />
+        <Button
+          label={submitting ? 'Saving…' : 'Complete'}
+          icon="check"
+          disabled={!proofUri || submitting}
+          onPress={handleComplete}
+        />
       </View>
     </Screen>
   );

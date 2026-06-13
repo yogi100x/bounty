@@ -7,7 +7,7 @@ import { Chip } from '@/components/ui/chip';
 import { Dots } from '@/components/ui/dots';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display } from '@/components/ui/text';
-import { useAppStore } from '@/store/useAppStore';
+import { useCoreActions, useSnapshot } from '@/data/core';
 
 type Preset = { value: string; label: string };
 
@@ -20,15 +20,21 @@ const PRESETS: Preset[] = [
 ];
 
 export default function NotifyScreen() {
-  const name = useAppStore((s) => s.user.name);
-  const setProfile = useAppStore((s) => s.setProfile);
-  const completeOnboarding = useAppStore((s) => s.completeOnboarding);
+  const snap = useSnapshot();
+  const actions = useCoreActions();
+  const name = snap?.profile.name ?? '';
   const [time, setTime] = useState('20:00');
+  const [saving, setSaving] = useState(false);
 
-  const handleStart = () => {
-    setProfile({ name, notifyTime: time });
-    completeOnboarding();
-    router.replace('/(tabs)');
+  const handleStart = async () => {
+    setSaving(true);
+    try {
+      await actions.setProfile({ notifyTime: time });
+      await actions.completeOnboarding();
+      router.replace('/(tabs)');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -55,7 +61,12 @@ export default function NotifyScreen() {
         </View>
 
         <View className="gap-3">
-          <Button label="Start" icon="check" onPress={handleStart} />
+          <Button
+            label={saving ? 'Starting…' : 'Start'}
+            icon="check"
+            disabled={saving}
+            onPress={handleStart}
+          />
           <Caption className="text-center text-text-muted">
             You are all set{name ? `, ${name}` : ''}. Let&rsquo;s begin.
           </Caption>

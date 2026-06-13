@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Heading, Label, Title } from '@/components/ui/text';
+import { useCoreActions } from '@/data/core';
 import { hapticTap } from '@/lib/haptics';
 import type { FeatherIcon } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
 
 const ICON_OPTIONS: FeatherIcon[] = [
   'check-circle',
@@ -25,26 +25,25 @@ const ICON_OPTIONS: FeatherIcon[] = [
 ];
 
 export default function AddHabitScreen() {
-  const addCustomHabit = useAppStore((s) => s.addCustomHabit);
+  const actions = useCoreActions();
 
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<FeatherIcon>('check-circle');
   const [proofRequired, setProofRequired] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const trimmed = name.trim();
-  const canSave = trimmed.length > 0;
+  const canSave = trimmed.length > 0 && !saving;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) return;
-    addCustomHabit({
-      name: trimmed,
-      icon,
-      category: 'Custom',
-      cadence: { kind: 'daily' },
-      proofRequired,
-      pointValue: 10,
-    });
-    router.back();
+    setSaving(true);
+    try {
+      await actions.addCustomHabit({ name: trimmed, icon, proofRequired });
+      router.back();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

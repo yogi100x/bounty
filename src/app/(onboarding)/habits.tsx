@@ -7,12 +7,13 @@ import { Chip } from '@/components/ui/chip';
 import { Dots } from '@/components/ui/dots';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display } from '@/components/ui/text';
+import { useCoreActions } from '@/data/core';
 import { HABIT_LIBRARY } from '@/data/habitLibrary';
-import { useAppStore } from '@/store/useAppStore';
 
 export default function HabitsScreen() {
-  const pickHabits = useAppStore((s) => s.pickHabits);
+  const actions = useCoreActions();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -23,9 +24,14 @@ export default function HabitsScreen() {
     });
   };
 
-  const handleContinue = () => {
-    pickHabits([...selected]);
-    router.push('/(onboarding)/notify');
+  const handleContinue = async () => {
+    setSaving(true);
+    try {
+      await actions.pickHabits([...selected]);
+      router.push('/(onboarding)/notify');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -52,9 +58,9 @@ export default function HabitsScreen() {
 
       <View className="gap-3 pb-2 pt-4">
         <Button
-          label="Continue"
+          label={saving ? 'Saving…' : 'Continue'}
           icon="arrow-right"
-          disabled={selected.size === 0}
+          disabled={selected.size === 0 || saving}
           onPress={handleContinue}
         />
         <Caption className="text-center text-text-muted">

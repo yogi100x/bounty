@@ -1,4 +1,5 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
@@ -6,10 +7,10 @@ import { Alert, Pressable, View } from 'react-native';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label, Title } from '@/components/ui/text';
+import { useCoreActions, useSnapshot } from '@/data/core';
 import { BADGE_CATALOG } from '@/data/badges';
 import { hapticTap } from '@/lib/haptics';
 import type { Badge } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
 
 const AVATAR_PRESETS: { color: string; label: string }[] = [
   { color: '#8B5CF6', label: 'Violet' },
@@ -18,6 +19,14 @@ const AVATAR_PRESETS: { color: string; label: string }[] = [
   { color: '#FB7185', label: 'Rose' },
   { color: '#34D399', label: 'Green' },
 ];
+
+/** First two initials from a name, fallback "Y". */
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'Y';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function StatCard({
   value,
@@ -116,31 +125,39 @@ function LinkRow({
 }
 
 export default function ProfileScreen() {
-  const user = useAppStore((s) => s.user);
-  const streaks = useAppStore((s) => s.streaks);
-  const completions = useAppStore((s) => s.completions);
-  const earnedBadges = useAppStore((s) => s.earnedBadges);
-  const setAvatarColor = useAppStore((s) => s.setAvatarColor);
-  const reset = useAppStore((s) => s.reset);
+  const snap = useSnapshot();
+  const actions = useCoreActions();
+  const { signOut } = useAuth();
 
   const [editing, setEditing] = useState(false);
 
-  const streakValues = Object.values(streaks);
-  const bestCurrent = streakValues.reduce((m, s) => Math.max(m, s.current), 0);
-  const longest = streakValues.reduce((m, s) => Math.max(m, s.longest), 0);
-
-  const earned = earnedBadges();
-  const earnedIds = new Set(earned.map((b) => b.id));
-
-  const handleReset = () => {
-    Alert.alert(
-      'Reset everything?',
-      'This clears your habits, streaks, and points — handy for re-testing onboarding.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => reset() },
-      ],
+  if (!snap) {
+    return (
+      <Screen scroll>
+        <View className="mt-16 items-center">
+          <Caption>Loading your profile…</Caption>
+        </View>
+      </Screen>
     );
+  }
+
+  const name = snap.profile.name || 'You';
+  const avatarColor = snap.profile.avatarColor;
+  const initials = initialsFor(snap.profile.name);
+
+  const earnedIds = new Set(
+    BADGE_CATALOG.filter((b) =>
+      b.kind === 'streak'
+        ? snap.longestStreak >= b.threshold
+        : snap.totalCompletions >= b.threshold,
+    ).map((b) => b.id),
+  );
+
+  const handleSignOut = () => {
+    Alert.alert('Sign out?', 'You can always come back — your story is saved.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+    ]);
   };
 
   return (
@@ -150,7 +167,7 @@ export default function ProfileScreen() {
         <View
           className="rounded-pill"
           style={{
-            shadowColor: user.avatarColor,
+            shadowColor: avatarColor,
             shadowOpacity: 0.35,
             shadowRadius: 24,
             shadowOffset: { width: 0, height: 0 },
@@ -159,15 +176,15 @@ export default function ProfileScreen() {
           <View
             className="h-24 w-24 items-center justify-center rounded-pill border-2"
             style={{
-              borderColor: user.avatarColor,
-              backgroundColor: `${user.avatarColor}26`,
+              borderColor: avatarColor,
+              backgroundColor: `${avatarColor}26`,
             }}>
-            <Heading className="text-[28px] leading-[34px]" style={{ color: user.avatarColor }}>
-              {user.avatarInitials}
+            <Heading className="text-[28px] leading-[34px]" style={{ color: avatarColor }}>
+              {initials}
             </Heading>
           </View>
         </View>
-        <Title className="mt-4">{user.name || 'You'}</Title>
+        <Title className="mt-4">{name}</Title>
 
         <Pressable
           accessibilityRole="button"
@@ -184,7 +201,7 @@ export default function ProfileScreen() {
         {editing ? (
           <View className="mt-4 flex-row flex-wrap items-center justify-center gap-3">
             {AVATAR_PRESETS.map((p) => {
-              const selected = p.color.toLowerCase() === user.avatarColor.toLowerCase();
+              const selected = p.color.toLowerCase() === avatarColor.toLowerCase();
               return (
                 <Pressable
                   key={p.color}
@@ -193,7 +210,7 @@ export default function ProfileScreen() {
                   accessibilityState={{ selected }}
                   onPress={() => {
                     hapticTap();
-                    setAvatarColor(p.color);
+                    void actions.setProfile({ avatarColor: p.color });
                   }}
                   className="h-10 w-10 items-center justify-center rounded-pill border-2"
                   style={{
@@ -210,16 +227,21 @@ export default function ProfileScreen() {
 
       {/* Stats */}
       <View className="mt-8 flex-row gap-3">
-        <StatCard value={String(bestCurrent)} label="Current streak" icon="flame" tint="#FB923C" />
-        <StatCard value={String(longest)} label="Longest" />
-        <StatCard value={String(completions.length)} label="Total proofs" />
+        <StatCard
+          value={String(snap.bestCurrentStreak)}
+          label="Current streak"
+          icon="flame"
+          tint="#FB923C"
+        />
+        <StatCard value={String(snap.longestStreak)} label="Longest" />
+        <StatCard value={String(snap.totalCompletions)} label="Total proofs" />
       </View>
 
       {/* Badge shelf */}
       <Heading className="mb-1 mt-8">Trophy case</Heading>
       <Caption className="mb-4">
-        {earned.length > 0
-          ? `${earned.length} of ${BADGE_CATALOG.length} earned. The shelf keeps growing.`
+        {earnedIds.size > 0
+          ? `${earnedIds.size} of ${BADGE_CATALOG.length} earned. The shelf keeps growing.`
           : 'Your first badge is one proof away.'}
       </Caption>
       <Card className="px-4 pb-0 pt-4">
@@ -240,7 +262,7 @@ export default function ProfileScreen() {
           label="Notifications"
           onPress={() => router.push('/settings/notifications')}
         />
-        <LinkRow icon="refresh-ccw" label="Reset (dev)" onPress={handleReset} danger />
+        <LinkRow icon="log-out" label="Sign out" onPress={handleSignOut} danger />
       </View>
     </Screen>
   );

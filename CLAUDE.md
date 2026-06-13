@@ -51,3 +51,17 @@ Env: copy `.env.example` → `.env`, fill `EXPO_PUBLIC_CONVEX_URL` (from `convex
 ## Critical sequencing rule
 
 The **first-win loop (nudge → capture proof → award moment) ships in Phase 1** with a *manual* proof-capture path — it must NOT wait for Circles (Phase 2) or the timed BeReal nudge (Phase 3). This intentionally overrides the PRD's original phase numbering; see `IMPLEMENTATION-PLAN.md` §1. The award/first-win moment is the emotional core and must hit 60fps on mid-range Android (profile from Phase 1, not at polish).
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->

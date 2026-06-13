@@ -5,8 +5,9 @@ import { Pressable, View } from 'react-native';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label, Title } from '@/components/ui/text';
-import type { LedgerEntry } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
+import { useLedger, useSnapshot } from '@/data/core';
+
+type LedgerItem = NonNullable<ReturnType<typeof useLedger>>[number];
 
 /** Relative time — "just now", "2h", "3d". */
 function timeAgo(ts: number): string {
@@ -30,7 +31,7 @@ function prettySource(source: string): string {
   return name || source;
 }
 
-function LedgerRow({ entry }: { entry: LedgerEntry }) {
+function LedgerRow({ entry }: { entry: LedgerItem }) {
   const isEarn = entry.type === 'earn';
   return (
     <View className="flex-row items-center gap-3 border-b border-border py-3.5">
@@ -51,9 +52,7 @@ function LedgerRow({ entry }: { entry: LedgerEntry }) {
           {timeAgo(entry.createdAt)} · balance {entry.balanceAfter}
         </Caption>
       </View>
-      <Label
-        className="font-sans-semibold"
-        style={{ color: isEarn ? '#A78BFA' : '#6E6E85' }}>
+      <Label className="font-sans-semibold" style={{ color: isEarn ? '#A78BFA' : '#6E6E85' }}>
         {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
       </Label>
     </View>
@@ -61,11 +60,8 @@ function LedgerRow({ entry }: { entry: LedgerEntry }) {
 }
 
 export default function LedgerScreen() {
-  const ledger = useAppStore((s) => s.ledger);
-  const availablePoints = useAppStore((s) => s.availablePoints);
-  const lifetimeEarned = useAppStore((s) => s.lifetimeEarned);
-
-  const entries = [...ledger].sort((a, b) => b.createdAt - a.createdAt);
+  const ledger = useLedger();
+  const snap = useSnapshot();
 
   return (
     <Screen scroll>
@@ -84,15 +80,19 @@ export default function LedgerScreen() {
       {/* Balance summary */}
       <Card className="mt-4 px-5 py-5">
         <Caption>Available</Caption>
-        <Display className="mt-1 text-violet-300">{availablePoints}</Display>
+        <Display className="mt-1 text-violet-300">{snap?.points ?? 0}</Display>
         <View className="mt-3 flex-row items-center gap-1.5">
           <Feather name="trending-up" size={13} color="#6E6E85" />
-          <Caption>{lifetimeEarned} earned all-time</Caption>
+          <Caption>{snap?.lifetimeEarned ?? 0} earned all-time</Caption>
         </View>
       </Card>
 
-      {/* Entries */}
-      {entries.length === 0 ? (
+      {/* Entries — query is already newest-first. */}
+      {ledger === undefined ? (
+        <View className="mt-12 items-center px-6">
+          <Caption>Loading your history…</Caption>
+        </View>
+      ) : ledger.length === 0 ? (
         <View className="mt-12 items-center px-6">
           <View
             className="h-14 w-14 items-center justify-center rounded-pill border border-border"
@@ -108,7 +108,7 @@ export default function LedgerScreen() {
         <View className="mt-7">
           <Heading className="mb-1">Activity</Heading>
           <Caption className="mb-2">Every point, earned and spent.</Caption>
-          {entries.map((e) => (
+          {ledger.map((e) => (
             <LedgerRow key={e.id} entry={e} />
           ))}
         </View>

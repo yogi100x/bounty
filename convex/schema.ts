@@ -29,6 +29,10 @@ export default defineSchema({
     avatarRef: v.optional(v.string()), // storageId or preset key
     timezone: v.string(), // IANA tz, e.g. "America/New_York"
     createdAt: v.number(),
+    // Profile/onboarding additions (optional so existing rows stay valid).
+    notifyTime: v.optional(v.string()), // HH:mm daily nudge
+    avatarColor: v.optional(v.string()), // hex preset, e.g. '#8B5CF6'
+    onboarded: v.optional(v.boolean()),
   }).index('by_clerk_id', ['clerkId']),
 
   habits: defineTable({
@@ -46,6 +50,7 @@ export default defineSchema({
     proofRequired: v.boolean(),
     isCustom: v.boolean(),
     source: v.union(v.literal('library'), v.literal('custom')),
+    sourceId: v.optional(v.string()), // library catalog id (for dedupe on import)
     pointValue: v.number(), // BASE points for this habit
     archived: v.boolean(),
     createdAt: v.number(),

@@ -1,6 +1,7 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getOrCreateUser, requireUser } from './lib/users';
+import type { Id } from './_generated/dataModel';
 
 const cadenceValidator = v.union(
   v.object({ kind: v.literal('daily') }),
@@ -93,6 +94,82 @@ export const addCustom = mutation({
     });
 
     return await ctx.db.get(habitId);
+  },
+});
+
+/**
+ * Add one or more habits from the curated library for the current user.
+ * Mirrors addCustom's side-table setup (streaks + streakPauses) per habit.
+ * Dedupes by `sourceId`: any library habit the user already owns is skipped.
+ */
+export const addFromLibrary = mutation({
+  args: {
+    habits: v.array(
+      v.object({
+        name: v.string(),
+        icon: v.string(),
+        category: categoryValidator,
+        cadence: cadenceValidator,
+        proofRequired: v.boolean(),
+        pointValue: v.number(),
+        sourceId: v.string(),
+      }),
+    ),
+    timezone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getOrCreateUser(ctx, { timezone: args.timezone });
+    const now = Date.now();
+
+    // Dedupe against habits the user already owns. There is no by_owner_source
+    // index, so we do a bounded scan of the user's habits via by_owner — fine
+    // for V1 (a user's habit list is small).
+    const existing = await ctx.db
+      .query('habits')
+      .withIndex('by_owner', (q) => q.eq('ownerId', user._id))
+      .take(500);
+    const ownedSourceIds = new Set(
+      existing.map((h) => h.sourceId).filter((s): s is string => !!s),
+    );
+
+    const createdIds: Id<'habits'>[] = [];
+    for (const h of args.habits) {
+      if (ownedSourceIds.has(h.sourceId)) continue;
+      ownedSourceIds.add(h.sourceId); // guard against dupes within this batch too
+
+      const habitId = await ctx.db.insert('habits', {
+        ownerId: user._id,
+        name: h.name,
+        icon: h.icon,
+        category: h.category,
+        cadence: h.cadence,
+        proofRequired: h.proofRequired,
+        isCustom: false,
+        source: 'library',
+        sourceId: h.sourceId,
+        pointValue: h.pointValue,
+        archived: false,
+        createdAt: now,
+      });
+
+      await ctx.db.insert('streaks', {
+        userId: user._id,
+        habitId,
+        current: 0,
+        longest: 0,
+        lastCompletedDate: null,
+      });
+      await ctx.db.insert('streakPauses', {
+        userId: user._id,
+        habitId,
+        usedOn: null,
+        remaining: 0,
+      });
+
+      createdIds.push(habitId);
+    }
+
+    return createdIds;
   },
 });
 

@@ -3,48 +3,57 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import type { Id } from '../../../convex/_generated/dataModel';
 import { HabitRow } from '@/components/habit-row';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label, Title } from '@/components/ui/text';
+import { useCoreActions, useSnapshot, type SnapshotHabit } from '@/data/core';
 import { prettyToday } from '@/lib/date';
 import { hapticMilestone, hapticSuccess } from '@/lib/haptics';
 import type { Habit } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
 
 const MOODS = ['Energized', 'Tired', 'Focused', 'Calm'] as const;
 
 export default function TodayScreen() {
-  // Live store reads — completing a habit re-renders the rows + hero instantly.
-  const habits = useAppStore((s) => s.habits);
-  const completions = useAppStore((s) => s.completions);
-  const streaks = useAppStore((s) => s.streaks);
-  const availablePoints = useAppStore((s) => s.availablePoints);
+  const snap = useSnapshot();
+  const actions = useCoreActions();
 
   const [mood, setMood] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Subscribing to `habits`/`completions` above means these getState() reads run
-  // against fresh state and re-render whenever a habit is completed/added.
-  void habits;
-  void completions;
-  const due = useAppStore.getState().habitsDueToday();
-  const isCompletedToday = (id: string) => useAppStore.getState().isCompletedToday(id);
+  if (snap === undefined) {
+    return (
+      <Screen>
+        <View className="flex-1 items-center justify-center">
+          <Caption>Loading…</Caption>
+        </View>
+      </Screen>
+    );
+  }
 
-  const bestStreak = Object.values(streaks).reduce((max, s) => Math.max(max, s.current), 0);
-  const allDone = due.length > 0 && due.every((h) => isCompletedToday(h.id));
+  const dueIds = new Set(snap.dueHabitIds);
+  const due = snap.habits.filter((h) => dueIds.has(h._id));
+  const allDone = due.length > 0 && due.every((h) => h.doneToday);
+  const doneCount = due.filter((h) => h.doneToday).length;
 
-  const handleComplete = (habit: Habit) => {
+  const handleComplete = async (habit: SnapshotHabit) => {
     if (habit.proofRequired) {
-      // Capture screen owns completion after the photo.
-      router.push({ pathname: '/capture', params: { habitId: habit.id } });
+      router.push({ pathname: '/capture', params: { habitId: habit._id } });
       return;
     }
-    const award = useAppStore.getState().completeHabitToday(habit.id);
-    if (award.isMilestone) hapticMilestone();
-    else hapticSuccess();
-    router.push('/award');
+    if (busyId) return;
+    setBusyId(habit._id);
+    try {
+      const award = await actions.completeHabit(habit._id as Id<'habits'>);
+      if (award.isMilestone) hapticMilestone();
+      else hapticSuccess();
+      router.push('/award');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -72,7 +81,7 @@ export default function TodayScreen() {
               <Feather name="trending-up" size={24} color="#FB923C" />
             </View>
             <View>
-              <Display className="text-streak">{bestStreak}</Display>
+              <Display className="text-streak">{snap.bestCurrentStreak}</Display>
               <Label className="mt-0.5 text-text-secondary">day streak</Label>
             </View>
           </View>
@@ -82,7 +91,7 @@ export default function TodayScreen() {
             className="flex-row items-center gap-1.5 rounded-pill border border-violet-500 px-3.5 py-2"
             style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
             <Feather name="zap" size={15} color="#C4B5FD" />
-            <Label className="text-violet-300">{availablePoints}</Label>
+            <Label className="text-violet-300">{snap.points}</Label>
           </View>
         </View>
       </Card>
@@ -91,7 +100,7 @@ export default function TodayScreen() {
       <View className="mb-3 mt-7 flex-row items-baseline justify-between">
         <Heading>Today&rsquo;s habits</Heading>
         <Caption>
-          {due.filter((h) => isCompletedToday(h.id)).length}/{due.length} done
+          {doneCount}/{due.length} done
         </Caption>
       </View>
 
@@ -118,10 +127,21 @@ export default function TodayScreen() {
       ) : (
         due.map((h) => (
           <HabitRow
-            key={h.id}
-            habit={h}
-            streak={streaks[h.id]?.current ?? 0}
-            completed={isCompletedToday(h.id)}
+            key={h._id}
+            habit={
+              {
+                id: h._id,
+                name: h.name,
+                icon: h.icon,
+                category: h.category,
+                cadence: h.cadence,
+                proofRequired: h.proofRequired,
+                isCustom: h.isCustom,
+                pointValue: h.pointValue,
+              } as Habit
+            }
+            streak={h.current}
+            completed={h.doneToday || busyId === h._id}
             onComplete={() => handleComplete(h)}
           />
         ))

@@ -71,6 +71,7 @@ type AppState = {
   habitsDueToday: () => Habit[];
   completeHabitToday: (habitId: string, opts?: CompleteOpts) => AwardResult;
   clearAward: () => void;
+  setAward: (award: AwardResult | null) => void;
   createCircle: (name: string, visibility: 'public' | 'private') => string;
   joinByCode: (code: string) => boolean;
   leaveCircle: () => void;
@@ -283,6 +284,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   clearAward: () => set({ lastAward: null }),
+
+  setAward: (award) => set({ lastAward: award }),
 
   createCircle: (name, visibility) => {
     const code = genCode();

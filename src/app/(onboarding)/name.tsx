@@ -6,16 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Dots } from '@/components/ui/dots';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display } from '@/components/ui/text';
+import { useCoreActions } from '@/data/core';
 import { cn } from '@/lib/cn';
-import { useAppStore } from '@/store/useAppStore';
 
 export default function NameScreen() {
-  const setProfile = useAppStore((s) => s.setProfile);
+  const actions = useCoreActions();
   const [name, setName] = useState('');
   const [focused, setFocused] = useState(false);
 
-  const handleContinue = () => {
-    setProfile({ name: name.trim() });
+  const handleContinue = async () => {
+    const trimmed = name.trim();
+    if (trimmed) await actions.setProfile({ name: trimmed });
     router.push('/(onboarding)/habits');
   };
 
