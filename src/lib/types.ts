@@ -58,8 +58,43 @@ export type LedgerEntry = {
 export type UserProfile = {
   name: string;
   avatarInitials: string;
+  avatarColor: string;
   notifyTime: string; // HH:mm
   onboarded: boolean;
+};
+
+export type NotifPrefs = {
+  dailyNudge: boolean;
+  streakAtRisk: boolean;
+  circleActivity: boolean;
+  bereal: boolean;
+};
+
+export type Reward = {
+  id: string;
+  title: string;
+  cost: number;
+  type: 'brand' | 'cause';
+  icon: FeatherIcon;
+  stock: number;
+  blurb?: string;
+};
+
+export type Redemption = {
+  id: string;
+  rewardId: string;
+  title: string;
+  cost: number;
+  createdAt: number;
+};
+
+export type Badge = {
+  id: string;
+  name: string;
+  icon: FeatherIcon;
+  threshold: number;
+  kind: 'streak' | 'count';
+  blurb: string;
 };
 
 export type CircleVisibility = 'public' | 'private';

@@ -1,65 +1,89 @@
 import { Feather } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { router } from 'expo-router';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, View } from 'react-native';
 
-import { Card } from '@/components/ui/card';
+import { RewardCard } from '@/components/reward-card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label } from '@/components/ui/text';
-
-const BALANCE = 340;
-
-type Reward = {
-  id: string;
-  title: string;
-  cost: number;
-  icon: React.ComponentProps<typeof Feather>['name'];
-};
-
-const REWARDS: Reward[] = [
-  { id: 'movie', title: 'Movie night', cost: 200, icon: 'film' },
-  { id: 'coffee', title: 'Fancy coffee', cost: 120, icon: 'coffee' },
-  { id: 'gear', title: 'New running gear', cost: 500, icon: 'shopping-bag' },
-];
-
-function RewardCard({ reward }: { reward: Reward }) {
-  const affordable = BALANCE >= reward.cost;
-  const toGo = reward.cost - BALANCE;
-
-  return (
-    <Card className="mb-3 flex-row items-center p-4">
-      <View className="h-12 w-12 items-center justify-center rounded-md border border-border bg-surface-2">
-        <Feather name={reward.icon} size={20} color="#C4B5FD" />
-      </View>
-      <View className="ml-3 flex-1">
-        <Label className="text-text-primary">{reward.title}</Label>
-        <Caption className="mt-0.5">{reward.cost} pts</Caption>
-      </View>
-      {affordable ? (
-        <View className="rounded-pill border border-violet-500 bg-violet-500/15 px-3 py-1.5">
-          <Caption className="text-violet-300">Redeem</Caption>
-        </View>
-      ) : (
-        <View className="items-end">
-          <Caption className="text-text-secondary">{toGo} to go</Caption>
-        </View>
-      )}
-    </Card>
-  );
-}
+import { hapticSuccess, hapticWarn } from '@/lib/haptics';
+import type { Reward } from '@/lib/types';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function RewardsScreen() {
+  const availablePoints = useAppStore((s) => s.availablePoints);
+  const rewards = useAppStore((s) => s.rewards);
+
+  const [justRedeemedId, setJustRedeemedId] = useState<string | null>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Causes first and cheapest-first, so the first redemption feels reachable;
+  // brand rewards follow, also ascending — the shelf reads as a climb.
+  const ordered = useMemo(() => {
+    const rank = (r: Reward) => (r.type === 'cause' ? 0 : 1);
+    return [...rewards].sort((a, b) => rank(a) - rank(b) || a.cost - b.cost);
+  }, [rewards]);
+
+  const nearest = useMemo(
+    () =>
+      ordered
+        .filter((r) => r.stock > 0 && r.cost > availablePoints)
+        .sort((a, b) => a.cost - b.cost)[0],
+    [ordered, availablePoints],
+  );
+
+  const handleRedeem = (id: string) => {
+    const res = useAppStore.getState().redeemReward(id);
+    if (res.ok) {
+      hapticSuccess();
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      setJustRedeemedId(id);
+      resetTimer.current = setTimeout(() => setJustRedeemedId(null), 2400);
+    } else {
+      // Affordability is gated in the card, so a failure here is a race
+      // (stock/points changed) — a gentle warn keeps it non-punishing.
+      hapticWarn();
+    }
+  };
+
   return (
     <Screen scroll>
-      <Heading className="mb-2 mt-2 text-text-secondary">Rewards</Heading>
+      {/* Hero — the balance as the prize. */}
+      <View className="mt-2 items-center pb-2 pt-5">
+        <View className="mb-3 h-14 w-14 items-center justify-center rounded-pill bg-violet-500/15">
+          <Feather name="zap" size={26} color="#C4B5FD" />
+        </View>
+        <Display className="text-[56px] leading-[60px] text-violet-300">{availablePoints}</Display>
+        <Label className="mt-1 text-text-secondary">points to spend</Label>
+        <Body className="mt-3 max-w-[280px] text-center text-text-secondary">
+          {nearest
+            ? `${nearest.cost - availablePoints} more and "${nearest.title}" is yours.`
+            : 'Every one of these is within reach. Treat yourself.'}
+        </Body>
 
-      <Card className="mt-1 items-center py-7">
-        <Caption className="text-text-secondary">Points balance</Caption>
-        <Display className="mt-1 text-violet-300">{BALANCE}</Display>
-        <Body className="mt-1 text-text-secondary">Keep showing up to earn more.</Body>
-      </Card>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/rewards/history')}
+          className="mt-4 flex-row items-center gap-1.5 rounded-pill border border-border bg-surface-1 px-4 py-2">
+          <Feather name="clock" size={14} color="#B9B9CC" />
+          <Label className="text-text-secondary">History</Label>
+        </Pressable>
+      </View>
 
-      <Heading className="mb-3 mt-7">Catalog</Heading>
-      {REWARDS.map((r) => (
-        <RewardCard key={r.id} reward={r} />
+      {/* Catalog */}
+      <Heading className="mb-1 mt-6">Marketplace</Heading>
+      <Caption className="mb-4 text-text-secondary">
+        Donations turn your streak into something bigger. Start there.
+      </Caption>
+
+      {ordered.map((reward) => (
+        <RewardCard
+          key={reward.id}
+          reward={reward}
+          availablePoints={availablePoints}
+          justRedeemed={justRedeemedId === reward.id}
+          onRedeem={handleRedeem}
+        />
       ))}
     </Screen>
   );

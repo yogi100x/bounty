@@ -1,16 +1,22 @@
 import { create } from 'zustand';
 
 import { todayISO, todayWeekday, yesterdayISO } from '@/lib/date';
+import { BADGE_CATALOG } from '@/data/badges';
 import { DEMO_MEMBERS, buildDemoFeed } from '@/data/demoCircle';
+import { REWARD_CATALOG } from '@/data/rewards';
 import type {
   AwardResult,
+  Badge,
   Circle,
   CircleEvent,
   CircleMember,
   Habit,
   HabitCompletion,
   LedgerEntry,
+  NotifPrefs,
   Proof,
+  Redemption,
+  Reward,
   StreakState,
   UserProfile,
 } from '@/lib/types';
@@ -53,6 +59,9 @@ type AppState = {
   members: Record<string, CircleMember[]>;
   currentCircleId: string | null;
   feed: CircleEvent[];
+  rewards: Reward[];
+  redemptions: Redemption[];
+  notifPrefs: NotifPrefs;
 
   setProfile: (p: { name: string; notifyTime?: string }) => void;
   pickHabits: (habitIds: string[]) => void;
@@ -66,6 +75,10 @@ type AppState = {
   joinByCode: (code: string) => boolean;
   leaveCircle: () => void;
   cheer: (eventId: string) => void;
+  redeemReward: (rewardId: string) => { ok: boolean; reason?: 'points' | 'stock' };
+  earnedBadges: () => Badge[];
+  setNotifPref: (key: keyof NotifPrefs, value: boolean) => void;
+  setAvatarColor: (color: string) => void;
   reset: () => void;
 };
 
@@ -79,8 +92,16 @@ function initials(name: string): string {
 const initialUser: UserProfile = {
   name: '',
   avatarInitials: 'B',
+  avatarColor: '#8B5CF6',
   notifyTime: '20:00',
   onboarded: false,
+};
+
+const initialNotifPrefs: NotifPrefs = {
+  dailyNudge: true,
+  streakAtRisk: true,
+  circleActivity: true,
+  bereal: true,
 };
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -97,6 +118,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   members: {},
   currentCircleId: null,
   feed: [],
+  rewards: REWARD_CATALOG.map((r) => ({ ...r })),
+  redemptions: [],
+  notifPrefs: initialNotifPrefs,
 
   setProfile: ({ name, notifyTime }) =>
     set((s) => ({
@@ -303,6 +327,41 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   leaveCircle: () => set({ circles: [], members: {}, currentCircleId: null, feed: [] }),
 
+  redeemReward: (rewardId) => {
+    const s = get();
+    const reward = s.rewards.find((r) => r.id === rewardId);
+    if (!reward || reward.stock <= 0) return { ok: false, reason: 'stock' };
+    if (s.availablePoints < reward.cost) return { ok: false, reason: 'points' };
+    const balanceAfter = s.availablePoints - reward.cost;
+    const redemptionId = uid('redeem');
+    set({
+      availablePoints: balanceAfter,
+      rewards: s.rewards.map((r) => (r.id === rewardId ? { ...r, stock: r.stock - 1 } : r)),
+      redemptions: [
+        { id: redemptionId, rewardId, title: reward.title, cost: reward.cost, createdAt: Date.now() },
+        ...s.redemptions,
+      ],
+      ledger: [
+        ...s.ledger,
+        { id: uid('led'), delta: -reward.cost, type: 'spend', source: `redeem:${reward.title}`, refId: redemptionId, balanceAfter, createdAt: Date.now() },
+      ],
+    });
+    return { ok: true };
+  },
+
+  earnedBadges: () => {
+    const s = get();
+    const longest = Math.max(0, ...Object.values(s.streaks).map((st) => st.longest));
+    const total = s.completions.length;
+    return BADGE_CATALOG.filter((b) =>
+      b.kind === 'streak' ? longest >= b.threshold : total >= b.threshold,
+    );
+  },
+
+  setNotifPref: (key, value) => set((s) => ({ notifPrefs: { ...s.notifPrefs, [key]: value } })),
+
+  setAvatarColor: (color) => set((s) => ({ user: { ...s.user, avatarColor: color } })),
+
   cheer: (eventId) =>
     set((st) => ({
       feed: st.feed.map((e) =>
@@ -327,5 +386,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       members: {},
       currentCircleId: null,
       feed: [],
+      rewards: REWARD_CATALOG.map((r) => ({ ...r })),
+      redemptions: [],
+      notifPrefs: initialNotifPrefs,
     }),
 }));
