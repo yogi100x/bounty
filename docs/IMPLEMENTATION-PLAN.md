@@ -3,7 +3,7 @@
 **Status:** Draft for review
 **Date:** 2026-06-13
 **Owner:** Yogi
-**Stack:** Expo / React Native (SDK 56) + expo-router · Convex backend · Clerk (Google-only) auth · NativeWind · Zustand
+**Stack:** Expo / React Native (SDK 56) + expo-router · Convex backend · Clerk (Google + Apple) auth · NativeWind · Zustand
 **Related:** `docs/PRD-V1-no-mascot.md`, `docs/USER-JOURNEY-V1-no-mascot.md`, `docs/DESIGN-SYSTEM.md`, `docs/DESIGN-SPEC.md`
 
 > This plan folds in the 2026-06-13 gap audit against the source `karmic_pwa` planning docs. Mascot, on-device gratitude journaling, AI prompts, and the “sunny sky” palette from the source are **intentionally out of scope** — Bounty is the no-mascot, social photo-proof variant on the dark-violet design system.
@@ -76,7 +76,7 @@ These are the highest-risk pieces; spec and unit-test them hard.
 
 - [ ] Create `tailwind.config.js` from the DESIGN-SYSTEM token block; wire NativeWind + `global.css`.
 - [ ] Load fonts (Clash Display + Inter) via `expo-font`.
-- [ ] Clerk provider + Google OAuth; persist session with `expo-secure-store`.
+- [ ] Clerk provider + Google & Apple OAuth; persist session with `expo-secure-store`.
 - [ ] `convex init`; author full `convex/schema.ts` (§2); wire Clerk ↔ Convex auth.
 - [ ] expo-router structure: auth gate → onboarding route group → tabs (Today / Circle / Rewards / Profile).
 - [ ] Motion/haptic token module per `DESIGN-SPEC.md` (spring configs, easing, named haptics).
@@ -86,7 +86,7 @@ These are the highest-risk pieces; spec and unit-test them hard.
 
 *Goal: install → sign in → onboard → prove one habit → satisfying confirmation, with no Circle required.*
 
-- [ ] **Auth:** Continue-with-Google screen; first-sign-in provisioning (user + empty ledger + timezone); sign-out.
+- [ ] **Auth:** Continue-with-Google + Continue-with-Apple screen; first-sign-in provisioning (user + empty ledger + timezone); sign-out.
 - [ ] **Trust surface:** privacy explainer + in-app **account deletion** flow (store-compliance — not deferred).
 - [ ] **Onboarding:** 4 steps (how it works → pick habit → set check-in time → optional start/join Circle), resumable, progress indicator; lands on Today with ≥1 habit.
 - [ ] **Habits — library:** curated seed data (name, icon, category, cadence, pointValue); browse + add.

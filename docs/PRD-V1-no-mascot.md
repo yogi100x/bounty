@@ -48,8 +48,8 @@ People who want to build daily habits and stick to them through light social acc
 
 ## 5. Features
 
-### 5.1 Authentication — Google Sign-In only
-- **Single auth path:** "Continue with Google." No email/password, no other providers in V1.
+### 5.1 Authentication — Google & Apple Sign-In (via Clerk)
+- **Two auth paths:** "Continue with Google" and "Continue with Apple." No email/password or other providers in V1. (Apple Sign-In also satisfies App Store policy when offering third-party sign-in.)
 - First sign-in provisions the user record (profile, avatar, empty points ledger).
 - Auth provider: **Clerk** (chosen for V1).
 - **Requirements:** persistent session; sign-out; account deletion path (store-compliance).
@@ -113,7 +113,7 @@ A short flow after first sign-in:
 
 ## 6. Core User Flow
 
-1. Install → **Continue with Google** → **Onboarding** (how it works → pick habit → set notify time → join/create circle).
+1. Install → **Continue with Google / Apple** → **Onboarding** (how it works → pick habit → set notify time → join/create circle).
 2. Land on **Today** with chosen habit(s).
 3. Receive **BeReal prompt** → capture proof.
 4. Proof posts to the **Circle feed**; streak increments; **points** credited to the ledger.
