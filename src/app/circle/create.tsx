@@ -8,26 +8,34 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading, Label } from '@/components/ui/text';
+import { useCircleActions } from '@/data/social';
 import { hapticSuccess, hapticTap } from '@/lib/haptics';
-import { useAppStore } from '@/store/useAppStore';
 
 type Visibility = 'private' | 'public';
 
 export default function CreateCircleScreen() {
+  const actions = useCircleActions();
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [focused, setFocused] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const close = () => {
     hapticTap();
     router.back();
   };
 
-  const handleCreate = () => {
-    const code = useAppStore.getState().createCircle(name.trim(), visibility);
-    hapticSuccess();
-    setInviteCode(code);
+  const handleCreate = async () => {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const circle = await actions.createCircle(name.trim(), visibility);
+      hapticSuccess();
+      setInviteCode(circle?.inviteCode ?? null);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const shareInvite = async () => {
@@ -152,7 +160,7 @@ export default function CreateCircleScreen() {
       </Caption>
 
       <View className="mt-10">
-        <Button label="Create" icon="arrow-right" onPress={handleCreate} />
+        <Button label="Create" icon="arrow-right" loading={creating} onPress={handleCreate} />
       </View>
     </Screen>
   );

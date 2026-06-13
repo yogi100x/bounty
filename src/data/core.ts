@@ -60,10 +60,11 @@ export function useCoreActions() {
       habitId: Id<'habits'>,
       opts?: { proofUri?: string; caption?: string },
     ): Promise<AwardResult> {
-      let proof: { photoStorageId: string; caption?: string; visibility: 'private' } | undefined;
+      let proof: { photoStorageId: string; caption?: string; visibility: 'circle' } | undefined;
       if (opts?.proofUri) {
         const photoStorageId = await uploadProof(opts.proofUri);
-        proof = { photoStorageId, caption: opts.caption, visibility: 'private' };
+        // 'circle' so proofs surface in the user's circle feed (no-op if solo).
+        proof = { photoStorageId, caption: opts.caption, visibility: 'circle' };
       }
       const award = (await completeM({
         habitId,

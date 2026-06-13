@@ -145,6 +145,11 @@ export default defineSchema({
   rewards: defineTable({
     item: v.string(),
     description: v.optional(v.string()),
+    // Catalog/UI fields (optional so existing rows stay valid). The seeded V1
+    // catalog mirrors src/data/rewards.ts which uses title/icon/blurb.
+    title: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    blurb: v.optional(v.string()),
     cost: v.number(), // points required
     stock: v.number(), // remaining stock; decremented on redemption
     type: v.union(v.literal('brand'), v.literal('cause')),
@@ -198,10 +203,26 @@ export default defineSchema({
       v.literal('milestone'),
     ),
     refId: v.optional(v.string()),
+    // Denormalized feed-render fields (optional so existing rows stay valid).
+    habitName: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    streak: v.optional(v.number()),
+    photoStorageId: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index('by_circle', ['circleId'])
     .index('by_actor', ['actorId']),
+
+  // Cheers on a circle event — one row per (event, user). Toggled via
+  // circles.cheer; feed reads count via by_event and membership via
+  // by_event_user.
+  cheers: defineTable({
+    circleEventId: v.id('circleEvents'),
+    userId: v.id('users'),
+    createdAt: v.number(),
+  })
+    .index('by_event', ['circleEventId'])
+    .index('by_event_user', ['circleEventId', 'userId']),
 
   milestones: defineTable({
     userId: v.id('users'),

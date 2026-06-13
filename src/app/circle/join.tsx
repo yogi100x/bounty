@@ -6,32 +6,44 @@ import { Pressable, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Heading, Label } from '@/components/ui/text';
+import { useCircleActions } from '@/data/social';
 import { hapticSuccess, hapticTap, hapticWarn } from '@/lib/haptics';
-import { useAppStore } from '@/store/useAppStore';
 
 export default function JoinCircleScreen() {
+  const actions = useCircleActions();
   const [code, setCode] = useState('');
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const close = () => {
     hapticTap();
     router.back();
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
+    if (joining) return;
     const trimmed = code.trim();
     if (!trimmed) {
       setError(true);
       hapticWarn();
       return;
     }
-    if (useAppStore.getState().joinByCode(trimmed)) {
-      hapticSuccess();
-      router.replace('/(tabs)/circle');
-    } else {
+    setJoining(true);
+    try {
+      const r = await actions.joinByCode(trimmed);
+      if (r.joined || r.alreadyMember) {
+        hapticSuccess();
+        router.replace('/(tabs)/circle');
+      } else {
+        setError(true);
+        hapticWarn();
+      }
+    } catch {
       setError(true);
       hapticWarn();
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -86,7 +98,7 @@ export default function JoinCircleScreen() {
       )}
 
       <View className="mt-10">
-        <Button label="Join" icon="arrow-right" onPress={handleJoin} />
+        <Button label="Join" icon="arrow-right" loading={joining} onPress={handleJoin} />
       </View>
     </Screen>
   );

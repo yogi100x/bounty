@@ -1,13 +1,14 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Label, Title } from '@/components/ui/text';
+import { useRedemptions } from '@/data/social';
 import { hapticTap } from '@/lib/haptics';
-import type { Redemption } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
+
+type Redemption = NonNullable<ReturnType<typeof useRedemptions>>[number];
 
 function relativeDate(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -46,7 +47,7 @@ function HistoryRow({ item }: { item: Redemption }) {
 }
 
 export default function RedemptionHistoryScreen() {
-  const redemptions = useAppStore((s) => s.redemptions);
+  const redemptions = useRedemptions();
 
   const close = () => {
     hapticTap();
@@ -67,7 +68,11 @@ export default function RedemptionHistoryScreen() {
         </Pressable>
       </View>
 
-      {redemptions.length === 0 ? (
+      {redemptions === undefined ? (
+        <View className="mt-24 items-center">
+          <ActivityIndicator color="#C4B5FD" />
+        </View>
+      ) : redemptions.length === 0 ? (
         <View className="mt-24 items-center gap-4 px-6">
           <View className="h-16 w-16 items-center justify-center rounded-pill bg-surface-2">
             <Feather name="gift" size={28} color="#6F6F87" />

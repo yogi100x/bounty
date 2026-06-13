@@ -201,6 +201,8 @@ export const completeHabit = mutation({
           actorId: user._id,
           type: 'milestone',
           refId: completionId,
+          habitName: habit.name,
+          streak: next.current,
           createdAt: now,
         });
       }
@@ -218,6 +220,10 @@ export const completeHabit = mutation({
           actorId: user._id,
           type: 'proof',
           refId: proofRefId,
+          habitName: habit.name,
+          caption: args.proof?.caption,
+          streak: next.current,
+          photoStorageId: args.proof?.photoStorageId,
           createdAt: now,
         });
       }

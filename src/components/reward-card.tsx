@@ -11,16 +11,18 @@ import Animated, {
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { Body, Caption, Label } from '@/components/ui/text';
+import type { Reward } from '@/data/social';
 import { springPop } from '@/lib/motion';
-import type { Reward } from '@/lib/types';
+import type { FeatherIcon } from '@/lib/types';
 
 type RewardCardProps = {
   reward: Reward;
-  availablePoints: number;
+  /** Parent knows the live balance; the card just renders the gap. */
+  affordable: boolean;
+  pointsToGo: number;
   justRedeemed?: boolean;
-  onRedeem: (id: string) => void;
+  onRedeem: (id: Reward['_id']) => void;
 };
 
 /**
@@ -29,11 +31,15 @@ type RewardCardProps = {
  * redeemed the card flips into an in-place "Redeemed!" success state with a
  * soft spring. Sold-out and points-to-go states keep the shelf encouraging.
  */
-export function RewardCard({ reward, availablePoints, justRedeemed, onRedeem }: RewardCardProps) {
+export function RewardCard({
+  reward,
+  affordable,
+  pointsToGo,
+  justRedeemed,
+  onRedeem,
+}: RewardCardProps) {
   const reducedMotion = useReducedMotion();
   const soldOut = reward.stock <= 0;
-  const affordable = availablePoints >= reward.cost;
-  const toGo = reward.cost - availablePoints;
   const isCause = reward.type === 'cause';
 
   // Success flip-in when this card was the most recent redemption.
@@ -61,7 +67,11 @@ export function RewardCard({ reward, availablePoints, justRedeemed, onRedeem }: 
       <View className="flex-row items-center">
         {/* Icon tile */}
         <View className="h-14 w-14 items-center justify-center rounded-md border border-border bg-surface-2">
-          <Feather name={reward.icon} size={22} color={isCause ? '#34D399' : '#C4B5FD'} />
+          <Feather
+            name={reward.icon as FeatherIcon}
+            size={22}
+            color={isCause ? '#34D399' : '#C4B5FD'}
+          />
         </View>
 
         {/* Title + blurb */}
@@ -98,13 +108,13 @@ export function RewardCard({ reward, availablePoints, justRedeemed, onRedeem }: 
           <Button
             label="Redeem"
             icon="gift"
-            onPress={() => onRedeem(reward.id)}
+            onPress={() => onRedeem(reward._id)}
             accessibilityLabel={`Redeem ${reward.title} for ${reward.cost} points`}
           />
         ) : (
           <View className="h-9 flex-row items-center justify-center gap-1.5 rounded-md border border-border bg-surface-2/40">
             <Feather name="lock" size={13} color="#6F6F87" />
-            <Caption className="text-text-secondary">{toGo} points to go</Caption>
+            <Caption className="text-text-secondary">{pointsToGo} points to go</Caption>
           </View>
         )}
       </View>

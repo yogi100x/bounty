@@ -1,29 +1,41 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Heading } from '@/components/ui/text';
-import { hapticSuccess, hapticTap } from '@/lib/haptics';
-import { useAppStore } from '@/store/useAppStore';
+import { useCircleActions } from '@/data/social';
+import { hapticSuccess, hapticTap, hapticWarn } from '@/lib/haptics';
 
 export default function InviteLandingScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const inviteCode = (code ?? '').toUpperCase();
+  const actions = useCircleActions();
+  const [joining, setJoining] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const close = () => {
     hapticTap();
     router.back();
   };
 
-  const handleJoin = () => {
-    // V1 fallback: attempt the join and navigate. If the user isn't onboarded
-    // yet, the gate handles redirecting them into onboarding — keep it simple.
-    useAppStore.getState().joinByCode(inviteCode);
-    hapticSuccess();
-    router.replace('/(tabs)/circle');
+  const handleJoin = async () => {
+    if (joining) return;
+    setJoining(true);
+    setError(null);
+    try {
+      await actions.joinByCode(inviteCode);
+      hapticSuccess();
+      router.replace('/(tabs)/circle');
+    } catch {
+      setError("We couldn't join that Circle. The code may be invalid or the Circle is full.");
+      hapticWarn();
+    } finally {
+      setJoining(false);
+    }
   };
 
   return (
@@ -63,8 +75,12 @@ export default function InviteLandingScreen() {
         </Card>
 
         <View className="mt-8 w-full max-w-[320px]">
-          <Button label="Join Circle" icon="arrow-right" onPress={handleJoin} />
+          <Button label="Join Circle" icon="arrow-right" loading={joining} onPress={handleJoin} />
         </View>
+
+        {error ? (
+          <Caption className="mt-4 max-w-[300px] text-center text-danger">{error}</Caption>
+        ) : null}
 
         <Caption className="mt-4 max-w-[300px] text-center">
           Circles are small — up to 6 people. You can leave anytime.

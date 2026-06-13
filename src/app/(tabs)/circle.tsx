@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -9,24 +9,24 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Heading, Label, Title } from '@/components/ui/text';
-import { useAppStore } from '@/store/useAppStore';
-import type { CircleEvent, CircleMember } from '@/lib/types';
+import { useCircle, useCircleActions } from '@/data/social';
+import type { FeedEvent, Member } from '@/data/social';
 
 const MAX_MEMBERS = 6;
 
 export default function CircleScreen() {
-  const currentCircleId = useAppStore((s) => s.currentCircleId);
-  const circle = useAppStore((s) => s.circles[0]);
-  const membersByCircle = useAppStore((s) => s.members);
-  const feed = useAppStore((s) => s.feed);
-  const cheer = useAppStore((s) => s.cheer);
-  const leaveCircle = useAppStore((s) => s.leaveCircle);
+  const data = useCircle();
+  const actions = useCircleActions();
 
-  if (currentCircleId == null || !circle) {
+  if (data === undefined) {
+    return <LoadingCircle />;
+  }
+
+  if (data === null) {
     return <EmptyCircle />;
   }
 
-  const members = membersByCircle[currentCircleId] ?? [];
+  const { circle, members, feed } = data;
 
   const confirmLeave = () => {
     Alert.alert(
@@ -34,7 +34,7 @@ export default function CircleScreen() {
       "You can always rejoin with an invite code. Your friends will miss you.",
       [
         { text: 'Stay', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: () => leaveCircle() },
+        { text: 'Leave', style: 'destructive', onPress: () => void actions.leave(circle._id) },
       ],
     );
   };
@@ -50,16 +50,29 @@ export default function CircleScreen() {
         ListHeaderComponent={
           <CircleHeader
             name={circle.name}
+            memberCount={circle.memberCount}
             members={members}
             onLeave={confirmLeave}
           />
         }
         ListEmptyComponent={<FreshFeed />}
-        renderItem={({ item }: { item: CircleEvent }) => (
-          <FeedCard event={item} onCheer={cheer} />
+        renderItem={({ item }: { item: FeedEvent }) => (
+          <FeedCard event={item} onCheer={(id) => void actions.cheer(id as FeedEvent['id'])} />
         )}
       />
     </SafeAreaView>
+  );
+}
+
+// Minimal loading state while the circle query resolves.
+function LoadingCircle() {
+  return (
+    <Screen>
+      <Title className="mb-2 mt-2">Circle</Title>
+      <View className="flex-1 items-center justify-center pb-16">
+        <ActivityIndicator color="#A78BFA" />
+      </View>
+    </Screen>
   );
 }
 
@@ -67,11 +80,13 @@ export default function CircleScreen() {
 
 function CircleHeader({
   name,
+  memberCount,
   members,
   onLeave,
 }: {
   name: string;
-  members: CircleMember[];
+  memberCount: number;
+  members: Member[];
   onLeave: () => void;
 }) {
   const shown = members.slice(0, 5);
@@ -81,7 +96,7 @@ function CircleHeader({
         <View className="flex-1 pr-3">
           <Title className="mt-1">{name}</Title>
           <Caption className="mt-1 text-text-secondary">
-            {members.length} of {MAX_MEMBERS} here
+            {memberCount} of {MAX_MEMBERS} here
           </Caption>
         </View>
         <Pressable
@@ -99,9 +114,9 @@ function CircleHeader({
         {shown.map((m, i) => (
           <View key={m.userId} style={{ marginLeft: i === 0 ? 0 : -10 }}>
             <Avatar
-              initials={m.avatarInitials}
+              initials={m.initials}
               size={40}
-              highlight={m.userId === 'me'}
+              highlight={m.isMe}
               className="border-2 border-bg"
             />
           </View>

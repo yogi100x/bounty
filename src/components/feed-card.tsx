@@ -11,12 +11,12 @@ import { Avatar } from '@/components/avatar';
 import { Body, Caption, Label } from '@/components/ui/text';
 import { hapticTap } from '@/lib/haptics';
 import { springPop } from '@/lib/motion';
-import type { CircleEvent } from '@/lib/types';
+import type { FeedEvent } from '@/data/social';
 
 const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 
 export type FeedCardProps = {
-  event: CircleEvent;
+  event: FeedEvent;
   onCheer: (eventId: string) => void;
 };
 
@@ -128,9 +128,9 @@ export function FeedCard({ event, onCheer }: FeedCardProps) {
       </View>
 
       {/* Photo */}
-      {event.photoUri ? (
+      {event.photoUrl ? (
         <Image
-          source={{ uri: event.photoUri }}
+          source={{ uri: event.photoUrl }}
           contentFit="cover"
           transition={200}
           style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16, marginTop: 14 }}
