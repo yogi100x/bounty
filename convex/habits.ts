@@ -90,7 +90,9 @@ export const addCustom = mutation({
       userId: user._id,
       habitId,
       usedOn: null,
-      remaining: 0,
+      // Starter mercy allotment so a single missed day doesn't kill a streak.
+      // TODO(P-later): replenish monthly (e.g. 2/month) via a cron.
+      remaining: 2,
     });
 
     return await ctx.db.get(habitId);
@@ -163,7 +165,8 @@ export const addFromLibrary = mutation({
         userId: user._id,
         habitId,
         usedOn: null,
-        remaining: 0,
+        // Starter mercy allotment (see addCustom).
+        remaining: 2,
       });
 
       createdIds.push(habitId);
